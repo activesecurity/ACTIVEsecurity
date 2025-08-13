@@ -129,7 +129,6 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Timestamp</th>
                         <th>Name</th>
                         <th>Contact</th>
                         <th>Location</th>
@@ -240,7 +239,6 @@
                     const date = item.createdAt ? item.createdAt.toDate().toLocaleString() : 'N/A';
                     
                     row.innerHTML = `
-                        <td>${date}</td>
                         <td>${item.name}</td>
                         <td>${item.contact}</td>
                         <td>${item.location}</td>
