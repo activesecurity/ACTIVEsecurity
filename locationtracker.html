@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Dashboard</title>
+    
+    <!-- Google Fonts for a professional look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* CSS Variables for Easy Theme Management */
+        :root {
+            --bg-color: #f8f9fa;
+            --surface-color: #ffffff;
+            --primary-text-color: #212529;
+            --secondary-text-color: #6c757d;
+            --border-color: #dee2e6;
+            --accent-color: #0d6efd;
+            --accent-color-hover: #0b5ed7;
+            --success-color: #198754;
+            --success-color-hover: #157347;
+            --danger-color: #dc3545;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.05), 0 4px 6px rgba(0, 0, 0, 0.07);
+            --border-radius: 12px;
+            --transition-speed: 0.2s;
+        }
+
+        /* Global & Typography */
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 2rem;
+            color: var(--primary-text-color);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Main Layout & Header */
+        .container { max-width: 900px; margin: 0 auto; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        h1 { font-size: 2.25rem; font-weight: 700; margin: 0; }
+        
+        /* Add Item Button */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+            box-shadow: var(--shadow);
+        }
+        .btn:hover { background-color: var(--accent-color-hover); transform: translateY(-2px); }
+
+        /* Security List & Items */
+        #securityListContainer { display: grid; gap: 1.5rem; }
+        .security-item {
+            background-color: var(--surface-color);
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: center;
+            border-left: 5px solid var(--accent-color);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: itemFadeIn 0.5s ease forwards;
+        }
+        .security-item div { display: flex; align-items: center; gap: 0.75rem; font-size: 1rem; }
+        .security-item i { color: var(--secondary-text-color); width: 20px; text-align: center; }
+        .security-item strong { font-weight: 500; color: var(--secondary-text-color); }
+        @keyframes itemFadeIn { to { opacity: 1; transform: translateY(0); } }
+        
+        /* Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(10, 22, 41, 0.5);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.modal-fade-in { animation: fadeIn 0.3s ease forwards; }
+        .modal.modal-fade-out { animation: fadeOut 0.3s ease forwards; }
+        .modal-content {
+            background-color: var(--surface-color);
+            width: 90%;
+            max-width: 500px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        .modal.modal-fade-in .modal-content { animation: zoomIn 0.3s ease forwards; }
+        .modal.modal-fade-out .modal-content { animation: zoomOut 0.3s ease forwards; }
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 { margin: 0; font-size: 1.5rem; }
+        .modal-body { padding: 1.5rem; }
+        .close-btn {
+            color: var(--secondary-text-color);
+            background: none;
+            border: none;
+            font-size: 1.75rem;
+            cursor: pointer;
+            line-height: 1;
+            transition: color var(--transition-speed) ease;
+        }
+        .close-btn:hover { color: var(--danger-color); }
+        
+        /* Form Styles */
+        #itemForm { display: flex; flex-direction: column; gap: 1.25rem; }
+        .form-group { display: flex; flex-direction: column; }
+        #itemForm label { margin-bottom: 0.5rem; font-weight: 500; color: var(--primary-text-color); }
+        #itemForm input {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: 'Inter', sans-serif;
+            transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+        #itemForm input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25);
+        }
+        .form-submit-btn { background-color: var(--success-color); }
+        .form-submit-btn:hover { background-color: var(--success-color-hover); }
+
+        /* Animation Keyframes */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        @keyframes zoomOut { from { transform: scale(1); opacity: 0; } to { transform: scale(0.95); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Security Roster</h1>
+            <button id="addItemBtn" class="btn">
+                <i class="fa-solid fa-plus"></i> Add Item
+            </button>
+        </header>
+
+        <main id="securityListContainer">
+            <!-- Items added here are for display on this page only -->
+        </main>
+    </div>
+
+    <!-- The Modal -->
+    <div id="itemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Security Item</h2>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="itemForm" novalidate>
+                    <div class="form-group">
+                        <label for="itemName">Name:</label>
+                        <input type="text" id="itemName" name="itemName" placeholder="e.g., John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemContact">Contact:</label>
+                        <input type="tel" id="itemContact" name="itemContact" placeholder="e.g., 0712 345 678" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="itemLocation">Assigned Location:</label>
+                        <input type="text" id="itemLocation" name="itemLocation" placeholder="e.g., Main Gate" required>
+                    </div>
+                    <button type="submit" class="btn form-submit-btn">
+                        <i class="fa-solid fa-check"></i> Submit Item
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('itemModal');
+            const openModalBtn = document.getElementById('addItemBtn');
+            const closeModalBtn = document.querySelector('.close-btn');
+            const itemForm = document.getElementById('itemForm');
+            const securityListContainer = document.getElementById('securityListContainer');
+
+            // --- Utility Functions ---
+            function showNotification(message, isError = false) {
+                const notification = document.createElement('div');
+                notification.textContent = message;
+                notification.style.position = 'fixed';
+                notification.style.bottom = '20px';
+                notification.style.left = '50%';
+                notification.style.transform = 'translateX(-50%)';
+                notification.style.backgroundColor = isError ? 'var(--danger-color)' : 'var(--accent-color)';
+                notification.style.color = 'white';
+                notification.style.padding = '12px 20px';
+                notification.style.borderRadius = '8px';
+                notification.style.boxShadow = 'var(--shadow-lg)';
+                notification.style.zIndex = '2000';
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s ease, bottom 0.3s ease';
+
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.opacity = '1';
+                    notification.style.bottom = '30px';
+                }, 10);
+
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.bottom = '20px';
+                    setTimeout(() => {
+                        if (document.body.contains(notification)) {
+                            document.body.removeChild(notification);
+                        }
+                    }, 300);
+                }, 4000); // Increased duration for important messages
+            }
+
+            // --- Modal Control Functions ---
+            const openModal = () => {
+                modal.style.display = 'flex';
+                modal.classList.add('modal-fade-in');
+                modal.classList.remove('modal-fade-out');
+            };
+
+            const closeModal = () => {
+                modal.classList.add('modal-fade-out');
+                modal.classList.remove('modal-fade-in');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                }, 300);
+            };
+
+            // --- Data Handling and Display Function ---
+            const addSecurityItem = (name, contact, location, latitude, longitude) => {
+                const roster = JSON.parse(localStorage.getItem('securityRoster')) || [];
+                roster.push({ name, contact, location, id: Date.now(), latitude, longitude });
+                localStorage.setItem('securityRoster', JSON.stringify(roster));
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'security-item';
+                
+                const sanitize = (str) => {
+                    const temp = document.createElement('div');
+                    temp.textContent = str;
+                    return temp.innerHTML;
+                };
+
+                itemDiv.innerHTML = `
+                    <div><i class="fa-solid fa-user-shield"></i> <span><strong>Name:</strong> ${sanitize(name)}</span></div>
+                    <div><i class="fa-solid fa-phone"></i> <span><strong>Contact:</strong> ${sanitize(contact)}</span></div>
+                    <div><i class="fa-solid fa-location-dot"></i> <span><strong>Location:</strong> ${sanitize(location)}</span></div>
+                `;
+                securityListContainer.appendChild(itemDiv);
+                
+                itemForm.reset();
+                closeModal();
+            };
+
+            // --- Event Listeners ---
+            openModalBtn.addEventListener('click', openModal);
+            closeModalBtn.addEventListener('click', closeModal);
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) closeModal();
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && modal.style.display === 'flex') closeModal();
+            });
+
+            // Handle form submission
+            itemForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const name = document.getElementById('itemName').value.trim();
+                const contact = document.getElementById('itemContact').value.trim();
+                const location = document.getElementById('itemLocation').value.trim();
+
+                if (!name || !contact || !location) {
+                    showNotification('Please fill out all fields.', true);
+                    return;
+                }
+                
+                // This function runs if location is successfully found
+                function success(position) {
+                    const { latitude, longitude } = position.coords;
+                    addSecurityItem(name, contact, location, latitude, longitude);
+                    showNotification('Item added with precise location!');
+                }
+
+                // This function runs if there's an error
+                function error(err) {
+                    console.error(`Geolocation error (${err.code}): ${err.message}`);
+                    // Check if the error is PERMISSION_DENIED
+                    if (err.code === err.PERMISSION_DENIED) {
+                        showNotification('Location access is required. Please allow location to add an item.', true);
+                    } else {
+                        // Handle other errors (e.g., timeout, position unavailable)
+                        showNotification('Could not get location. Please check device settings and try again.', true);
+                    }
+                    // IMPORTANT: Do not call addSecurityItem here, to prevent submission.
+                }
+
+                // Check for Geolocation support
+                if ('geolocation' in navigator) {
+                    // Options for high accuracy
+                    const geoOptions = {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    };
+                    showNotification('Getting precise location...');
+                    navigator.geolocation.getCurrentPosition(success, error, geoOptions);
+                } else {
+                    showNotification('Geolocation is not supported by this browser. Cannot add item.', true);
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
