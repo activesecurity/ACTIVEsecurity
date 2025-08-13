@@ -120,7 +120,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Security List</h1>
+            <h1>Security Roster</h1>
             <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
         </header>
 
@@ -129,9 +129,11 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Timestamp</th>
                         <th>Name</th>
                         <th>Client</th>
-                        <th>Location</th>
+                        <th>Contact</th>
+                        <th>Assigned Location</th>
                     </tr>
                 </thead>
                 <tbody id="rosterTableBody">
@@ -155,7 +157,8 @@
                 <form id="itemForm" novalidate>
                     <input type="text" id="itemName" placeholder="Name" required>
                     <input type="text" id="itemClient" placeholder="Client" required>
-                    <input type="text" id="itemLocation" placeholder="Location" required>
+                    <input type="tel" id="itemContact" placeholder="Contact" required>
+                    <input type="text" id="itemLocation" placeholder="Assigned Location" required>
                     <button type="submit" id="submitBtn" class="btn form-submit-btn"><i class="fa-solid fa-check"></i> Submit Item</button>
                 </form>
             </div>
@@ -194,6 +197,15 @@
             messagingSenderId: "1092703843512",
             appId: "1:1092703843512:web:4815e777be29aa9af6b04d"
             };
+
+        // **FIX**: Add a check to ensure Firebase config is not using placeholder values.
+        // This prevents the "auth/api-key-not-valid" error.
+        if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+            alert("Firebase is not configured. Please replace the placeholder values in the 'firebaseConfig' object in your HTML file with your actual Firebase project credentials. You can get these from your Firebase project settings.");
+            // Stop the script from executing further to prevent more errors.
+            throw new Error("Firebase configuration is missing.");
+        }
+
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -239,8 +251,10 @@
                     const date = item.createdAt ? item.createdAt.toDate().toLocaleString() : 'N/A';
                     
                     row.innerHTML = `
+                        <td>${date}</td>
                         <td>${item.name || ''}</td>
                         <td>${item.client || ''}</td>
+                        <td>${item.contact || ''}</td>
                         <td>${item.location || ''}</td>
                     `;
                 });
@@ -261,19 +275,17 @@
 
         const handleFormSubmit = async (event) => {
             event.preventDefault();
-            if (firebaseConfig.apiKey === "YOUR_API_KEY") {
-                alert("Firebase is not configured. Please update the firebaseConfig object.");
-                return;
-            }
+            
             submitBtn.disabled = true;
             submitBtn.textContent = 'Verifying...';
 
             const name = document.getElementById('itemName').value.trim();
             const client = document.getElementById('itemClient').value.trim();
+            const contact = document.getElementById('itemContact').value.trim();
             const location = document.getElementById('itemLocation').value.trim();
-            const formData = { name, client, location };
+            const formData = { name, client, contact, location };
 
-            if (!name || !client || !location) {
+            if (!name || !client || !contact || !location) {
                 alert('Please fill out all fields.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submit Item';

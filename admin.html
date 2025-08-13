@@ -120,8 +120,10 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Timestamp</th>
                         <th>Name</th>
                         <th>Client</th>
+                        <th>Contact</th>
                         <th>Location</th>
                         <th>GPS</th>
                         <th>Actions</th>
@@ -145,6 +147,7 @@
                     <input type="hidden" id="editDocId">
                     <input type="text" id="editItemName" placeholder="Name" required>
                     <input type="text" id="editItemClient" placeholder="Client" required>
+                    <input type="tel" id="editItemContact" placeholder="Contact" required>
                     <input type="text" id="editItemLocation" placeholder="Assigned Location" required>
                     <button type="submit" class="btn btn-save"><i class="fa-solid fa-save"></i> Save Changes</button>
                 </form>
@@ -166,6 +169,11 @@
             messagingSenderId: "1092703843512",
             appId: "1:1092703843512:web:4815e777be29aa9af6b04d"
             };
+        
+        if (firebaseConfig.apiKey === "YOUR_API_KEY") {
+            alert("Firebase is not configured. Please update the firebaseConfig object in your HTML file.");
+            throw new Error("Firebase configuration is missing.");
+        }
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -203,8 +211,10 @@
                     }
                     
                     row.innerHTML = `
+                        <td>${date}</td>
                         <td>${item.name || ''}</td>
                         <td>${item.client || ''}</td>
+                        <td>${item.contact || ''}</td>
                         <td>${item.location || ''}</td>
                         <td>${gpsCellContent}</td>
                         <td class="actions-cell">
@@ -246,11 +256,13 @@
 
             const name = row.cells[1].textContent;
             const client = row.cells[2].textContent;
-            const location = row.cells[3].textContent;
+            const contact = row.cells[3].textContent;
+            const location = row.cells[4].textContent;
 
             document.getElementById('editDocId').value = docId;
             document.getElementById('editItemName').value = name;
             document.getElementById('editItemClient').value = client;
+            document.getElementById('editItemContact').value = contact;
             document.getElementById('editItemLocation').value = location;
             
             editItemModal.style.display = 'flex';
@@ -263,6 +275,7 @@
             const updatedData = {
                 name: document.getElementById('editItemName').value,
                 client: document.getElementById('editItemClient').value,
+                contact: document.getElementById('editItemContact').value,
                 location: document.getElementById('editItemLocation').value,
             };
 
