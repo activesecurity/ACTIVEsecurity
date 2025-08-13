@@ -120,7 +120,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Security Roster</h1>
+            <h1>Security List</h1>
             <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
         </header>
 
@@ -129,7 +129,6 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Timestamp</th>
                         <th>Name</th>
                         <th>Client</th>
                         <th>Assigned Location</th>
@@ -240,7 +239,6 @@
                     const date = item.createdAt ? item.createdAt.toDate().toLocaleString() : 'N/A';
                     
                     row.innerHTML = `
-                        <td>${date}</td>
                         <td>${item.name || ''}</td>
                         <td>${item.client || ''}</td>
                         <td>${item.location || ''}</td>
