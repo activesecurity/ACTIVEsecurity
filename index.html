@@ -59,7 +59,7 @@
             transition: all var(--transition-speed) ease;
         }
         .btn:hover { background-color: var(--accent-color-hover); transform: translateY(-2px); }
-        .btn:disabled { background-color: var(--secondary-text-color); cursor: not-allowed; }
+        .btn:disabled { background-color: var(--secondary-text-color); cursor: not-allowed; transform: none; }
         .modal {
             display: none;
             position: fixed;
@@ -77,15 +77,26 @@
             max-width: 500px;
             border-radius: var(--border-radius);
             box-shadow: var(--shadow-lg);
+            text-align: center;
         }
-        .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header { 
+            padding: 1.5rem; 
+            border-bottom: 1px solid var(--border-color); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            text-align: left;
+        }
         .modal-header h2 { margin: 0; font-size: 1.5rem; }
         .modal-body { padding: 1.5rem; }
         .close-btn { color: var(--secondary-text-color); background: none; border: none; font-size: 1.75rem; cursor: pointer; }
-        #itemForm { display: flex; flex-direction: column; gap: 1.25rem; }
+        #itemForm { display: flex; flex-direction: column; gap: 1.25rem; text-align: left; }
         #itemForm label { margin-bottom: 0.5rem; font-weight: 500; }
         #itemForm input { padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
         .form-submit-btn { background-color: var(--success-color); }
+        .location-modal-icon { font-size: 3rem; color: var(--danger-color); margin-bottom: 1rem; }
+        .location-modal-body p { color: var(--secondary-text-color); line-height: 1.6; }
+
     </style>
 </head>
 <body>
@@ -97,11 +108,12 @@
         <main id="securityListContainer"></main>
     </div>
 
+    <!-- Item Entry Modal -->
     <div id="itemModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Add New Security Item</h2>
-                <button class="close-btn">&times;</button>
+                <button class="close-btn" data-modal-id="itemModal">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="itemForm" novalidate>
@@ -110,6 +122,22 @@
                     <input type="text" id="itemLocation" placeholder="Assigned Location" required>
                     <button type="submit" id="submitBtn" class="btn form-submit-btn"><i class="fa-solid fa-check"></i> Submit Item</button>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location Permission Modal -->
+    <div id="locationPermissionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Location Access Required</h2>
+                <button class="close-btn" data-modal-id="locationPermissionModal">&times;</button>
+            </div>
+            <div class="modal-body location-modal-body">
+                <i class="fa-solid fa-location-crosshairs location-modal-icon"></i>
+                <p>This application requires access to your location to submit an entry.</p>
+                <p>Please enable location services for this site in your browser's settings and try again.</p>
+                <button class="btn close-btn" data-modal-id="locationPermissionModal">I Understand</button>
             </div>
         </div>
     </div>
@@ -130,34 +158,40 @@
             appId: "YOUR_APP_ID"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Sign in user anonymously
         signInAnonymously(auth).catch((error) => {
             console.error("Anonymous sign-in failed:", error);
-            showNotification("Could not connect to the server.", true);
         });
 
-        const modal = document.getElementById('itemModal');
+        const itemModal = document.getElementById('itemModal');
+        const locationModal = document.getElementById('locationPermissionModal');
         const openModalBtn = document.getElementById('addItemBtn');
-        const closeModalBtn = document.querySelector('.close-btn');
+        const closeButtons = document.querySelectorAll('.close-btn');
         const itemForm = document.getElementById('itemForm');
         const submitBtn = document.getElementById('submitBtn');
 
-        function showNotification(message, isError = false) {
-            // (Notification function remains the same as previous version)
-        }
+        const openModal = (modalElement) => modalElement.style.display = 'flex';
+        const closeModal = (modalElement) => modalElement.style.display = 'none';
 
-        const openModal = () => modal.style.display = 'flex';
-        const closeModal = () => modal.style.display = 'none';
+        openModalBtn.addEventListener('click', () => openModal(itemModal));
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const modalId = btn.dataset.modalId;
+                closeModal(document.getElementById(modalId));
+            });
+        });
 
-        openModalBtn.addEventListener('click', openModal);
-        closeModalBtn.addEventListener('click', closeModal);
+        const addDataToFirestore = async (data) => {
+             await addDoc(collection(db, "securityRoster"), {
+                ...data,
+                createdAt: serverTimestamp()
+            });
+        };
 
-        itemForm.addEventListener('submit', async (event) => {
+        const handleFormSubmit = async (event) => {
             event.preventDefault();
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
@@ -165,52 +199,60 @@
             const name = document.getElementById('itemName').value.trim();
             const contact = document.getElementById('itemContact').value.trim();
             const location = document.getElementById('itemLocation').value.trim();
+            const formData = { name, contact, location };
 
             if (!name || !contact || !location) {
-                showNotification('Please fill out all fields.', true);
+                // This part is for a potential notification system
+                console.log('Please fill out all fields.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submit Item';
                 return;
             }
 
-            const getLocation = () => new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    reject(new Error("Geolocation is not supported by this browser."));
-                    return;
-                }
+            const getLocationAndSubmit = () => {
                 const options = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-                navigator.geolocation.getCurrentPosition(resolve, reject, options);
-            });
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        const { latitude, longitude } = position.coords;
+                        await addDataToFirestore({ ...formData, latitude, longitude });
+                        itemForm.reset();
+                        closeModal(itemModal);
+                    },
+                    (error) => {
+                        console.error("Geolocation Error:", error.message);
+                        openModal(locationModal);
+                    },
+                    options
+                );
+            };
 
-            try {
-                const position = await getLocation();
-                const { latitude, longitude } = position.coords;
-
-                // Add data to Firestore
-                await addDoc(collection(db, "securityRoster"), {
-                    name: name,
-                    contact: contact,
-                    location: location,
-                    latitude: latitude,
-                    longitude: longitude,
-                    createdAt: serverTimestamp()
-                });
-
-                showNotification('Item added successfully!');
-                itemForm.reset();
-                closeModal();
-            } catch (error) {
-                console.error("Submission Error:", error);
-                if (error.code === 1) { // PERMISSION_DENIED
-                    showNotification('Location access is required to submit.', true);
-                } else {
-                    showNotification('Could not get location. Check device settings.', true);
+            if (navigator.permissions) {
+                const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+                if (permissionStatus.state === 'granted') {
+                    getLocationAndSubmit();
+                } else if (permissionStatus.state === 'prompt') {
+                    getLocationAndSubmit();
+                } else if (permissionStatus.state === 'denied') {
+                    openModal(locationModal);
                 }
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submit Item';
+                permissionStatus.onchange = () => {
+                    if(permissionStatus.state === 'granted') {
+                         closeModal(locationModal);
+                    }
+                };
+            } else if (navigator.geolocation) {
+                // Fallback for browsers that don't support Permissions API
+                getLocationAndSubmit();
+            } else {
+                console.log("Geolocation is not supported by this browser.");
             }
-        });
+
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submit Item';
+        };
+
+        itemForm.addEventListener('submit', handleFormSubmit);
+
     </script>
 </body>
 </html>
