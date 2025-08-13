@@ -19,9 +19,16 @@
             --secondary-text-color: #6c757d;
             --border-color: #dee2e6;
             --danger-color: #dc3545;
+            --danger-color-hover: #bb2d3b;
             --accent-color: #0d6efd;
-            --shadow: 0 4px 6px rgba(0, 0, 0, 0.04);
+            --accent-color-hover: #0b5ed7;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --warning-color-hover: #ffca2c;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
             --border-radius: 12px;
+            --transition-speed: 0.2s;
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -39,6 +46,28 @@
             border-bottom: 1px solid var(--border-color);
         }
         h1 { font-size: 2.25rem; font-weight: 700; margin: 0; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+        }
+        .btn:hover { transform: translateY(-2px); }
+        .btn-danger { background-color: var(--danger-color); }
+        .btn-danger:hover { background-color: var(--danger-color-hover); }
+        .btn-edit { background-color: var(--warning-color); color: #212529; }
+        .btn-edit:hover { background-color: var(--warning-color-hover); }
+        .btn-delete { background-color: var(--danger-color); }
+        .btn-delete:hover { background-color: var(--danger-color-hover); }
+        .btn-save { background-color: var(--success-color); }
+        
         .table-container {
             background-color: var(--surface-color);
             border-radius: var(--border-radius);
@@ -50,14 +79,42 @@
         thead { background-color: #f1f3f5; }
         th { font-weight: 600; font-size: 0.875rem; text-transform: uppercase; color: var(--secondary-text-color); }
         tbody tr:last-child td { border-bottom: none; }
+        .actions-cell { display: flex; gap: 0.5rem; }
         .map-link { color: var(--accent-color); text-decoration: none; font-weight: 500; }
         .empty-state { text-align: center; padding: 4rem; color: var(--secondary-text-color); }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(10, 22, 41, 0.5);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: var(--surface-color);
+            width: 90%;
+            max-width: 500px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { margin: 0; font-size: 1.5rem; }
+        .modal-body { padding: 1.5rem; }
+        .close-btn { color: var(--secondary-text-color); background: none; border: none; font-size: 1.75rem; cursor: pointer; }
+        #editItemForm { display: flex; flex-direction: column; gap: 1.25rem; }
+        #editItemForm input { padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
+
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>Admin Roster View</h1>
+            <button id="clearAllBtn" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i> Clear All</button>
         </header>
         <main class="table-container">
             <table>
@@ -66,35 +123,50 @@
                         <th>Timestamp</th>
                         <th>Name</th>
                         <th>Contact</th>
-                        <th>Assigned Location</th>
-                        <th>GPS Location</th>
+                        <th>Location</th>
+                        <th>GPS</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
-                <tbody id="rosterTableBody">
-                    <!-- Data will be injected here -->
-                </tbody>
+                <tbody id="rosterTableBody"></tbody>
             </table>
-            <div id="emptyState" class="empty-state">
-                <p>Loading roster...</p>
-            </div>
+            <div id="emptyState" class="empty-state"><p>Loading roster...</p></div>
         </main>
+    </div>
+
+    <!-- Edit Item Modal -->
+    <div id="editItemModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Roster Entry</h2>
+                <button id="closeEditModalBtn" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editItemForm">
+                    <input type="hidden" id="editDocId">
+                    <input type="text" id="editItemName" placeholder="Name" required>
+                    <input type="tel" id="editItemContact" placeholder="Contact" required>
+                    <input type="text" id="editItemLocation" placeholder="Assigned Location" required>
+                    <button type="submit" class="btn btn-save"><i class="fa-solid fa-save"></i> Save Changes</button>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 
-        // IMPORTANT: Replace with your actual Firebase configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyA3FNmtty3f5DFH5gobm_Ake_C2UUIzeqg",
-            authDomain: "security-c64c6.firebaseapp.com",
-            projectId: "security-c64c6",
-            storageBucket: "security-c64c6.firebasestorage.app",
-            messagingSenderId: "1092703843512",
-            appId: "1:1092703843512:web:4815e777be29aa9af6b04d"
-            };
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -104,11 +176,17 @@
 
         const tableBody = document.getElementById('rosterTableBody');
         const emptyState = document.getElementById('emptyState');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const editItemModal = document.getElementById('editItemModal');
+        const editItemForm = document.getElementById('editItemForm');
+        const closeEditModalBtn = document.getElementById('closeEditModalBtn');
 
-        const q = query(collection(db, "securityRoster"), orderBy("createdAt", "desc"));
+        const rosterCollection = collection(db, "securityRoster");
 
+        // --- Real-time listener to display data ---
+        const q = query(rosterCollection, orderBy("createdAt", "desc"));
         onSnapshot(q, (querySnapshot) => {
-            tableBody.innerHTML = ''; // Clear previous data
+            tableBody.innerHTML = '';
             if (querySnapshot.empty) {
                 emptyState.innerHTML = '<p>No security items have been added yet.</p>';
                 emptyState.style.display = 'block';
@@ -117,26 +195,108 @@
                 querySnapshot.forEach((doc) => {
                     const item = doc.data();
                     const row = tableBody.insertRow();
+                    row.dataset.id = doc.id; // Store doc ID on the row
 
                     const date = item.createdAt ? item.createdAt.toDate().toLocaleString() : 'N/A';
-                    let gpsCellContent = 'Not available';
+                    let gpsCellContent = 'N/A';
                     if (item.latitude) {
-                        gpsCellContent = `<a href="https://www.google.com/maps?q=${item.latitude},${item.longitude}" class="map-link" target="_blank">View on Map</a>`;
+                        gpsCellContent = `<a href="https://www.google.com/maps?q=${item.latitude},${item.longitude}" class="map-link" target="_blank">View</a>`;
                     }
-
+                    
                     row.innerHTML = `
                         <td>${date}</td>
                         <td>${item.name}</td>
                         <td>${item.contact}</td>
                         <td>${item.location}</td>
                         <td>${gpsCellContent}</td>
+                        <td class="actions-cell">
+                            <button class="btn btn-edit" data-id="${doc.id}"><i class="fa-solid fa-pencil"></i></button>
+                            <button class="btn btn-delete" data-id="${doc.id}"><i class="fa-solid fa-trash"></i></button>
+                        </td>
                     `;
                 });
             }
-        }, (error) => {
-            console.error("Error fetching roster: ", error);
-            emptyState.innerHTML = '<p>Could not load data. Check console for errors.</p>';
         });
+
+        // --- Event Delegation for Edit/Delete Buttons ---
+        tableBody.addEventListener('click', (e) => {
+            const target = e.target.closest('button');
+            if (!target) return;
+            
+            const docId = target.dataset.id;
+            if (target.classList.contains('btn-delete')) {
+                handleDelete(docId);
+            } else if (target.classList.contains('btn-edit')) {
+                handleEdit(docId);
+            }
+        });
+
+        const handleDelete = async (docId) => {
+            if (confirm('Are you sure you want to delete this entry?')) {
+                try {
+                    await deleteDoc(doc(db, "securityRoster", docId));
+                } catch (error) {
+                    console.error("Error deleting document: ", error);
+                    alert("Could not delete entry.");
+                }
+            }
+        };
+
+        const handleEdit = (docId) => {
+            const row = tableBody.querySelector(`tr[data-id="${docId}"]`);
+            if (!row) return;
+
+            const name = row.cells[1].textContent;
+            const contact = row.cells[2].textContent;
+            const location = row.cells[3].textContent;
+
+            document.getElementById('editDocId').value = docId;
+            document.getElementById('editItemName').value = name;
+            document.getElementById('editItemContact').value = contact;
+            document.getElementById('editItemLocation').value = location;
+            
+            editItemModal.style.display = 'flex';
+        };
+
+        // --- Edit Form Submission ---
+        editItemForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = document.getElementById('editDocId').value;
+            const updatedData = {
+                name: document.getElementById('editItemName').value,
+                contact: document.getElementById('editItemContact').value,
+                location: document.getElementById('editItemLocation').value,
+            };
+
+            try {
+                const docRef = doc(db, "securityRoster", docId);
+                await updateDoc(docRef, updatedData);
+                editItemModal.style.display = 'none';
+            } catch (error) {
+                console.error("Error updating document: ", error);
+                alert("Could not update entry.");
+            }
+        });
+        
+        closeEditModalBtn.addEventListener('click', () => {
+            editItemModal.style.display = 'none';
+        });
+
+        // --- Clear All Functionality ---
+        clearAllBtn.addEventListener('click', async () => {
+            if (confirm('ARE YOU SURE you want to delete ALL entries? This action cannot be undone.')) {
+                try {
+                    const querySnapshot = await getDocs(rosterCollection);
+                    querySnapshot.forEach(async (doc) => {
+                        await deleteDoc(doc.ref);
+                    });
+                } catch (error) {
+                    console.error("Error clearing collection: ", error);
+                    alert("Could not clear all entries.");
+                }
+            }
+        });
+
     </script>
 </body>
 </html>
