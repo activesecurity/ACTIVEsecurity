@@ -120,7 +120,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Security List</h1>
+            <h1>Security Roster</h1>
             <button id="addItemBtn" class="btn"><i class="fa-solid fa-plus"></i> Add Item</button>
         </header>
 
@@ -129,9 +129,10 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Timestamp</th>
                         <th>Name</th>
-                        <th>Contact</th>
-                        <th>Location</th>
+                        <th>Client</th>
+                        <th>Assigned Location</th>
                     </tr>
                 </thead>
                 <tbody id="rosterTableBody">
@@ -154,8 +155,8 @@
             <div class="modal-body">
                 <form id="itemForm" novalidate>
                     <input type="text" id="itemName" placeholder="Name" required>
-                    <input type="tel" id="itemContact" placeholder="Contact" required>
-                    <input type="text" id="itemLocation" placeholder="Location" required>
+                    <input type="text" id="itemClient" placeholder="Client" required>
+                    <input type="text" id="itemLocation" placeholder="Assigned Location" required>
                     <button type="submit" id="submitBtn" class="btn form-submit-btn"><i class="fa-solid fa-check"></i> Submit Item</button>
                 </form>
             </div>
@@ -239,9 +240,10 @@
                     const date = item.createdAt ? item.createdAt.toDate().toLocaleString() : 'N/A';
                     
                     row.innerHTML = `
-                        <td>${item.name}</td>
-                        <td>${item.contact}</td>
-                        <td>${item.location}</td>
+                        <td>${date}</td>
+                        <td>${item.name || ''}</td>
+                        <td>${item.client || ''}</td>
+                        <td>${item.location || ''}</td>
                     `;
                 });
             }
@@ -269,11 +271,11 @@
             submitBtn.textContent = 'Verifying...';
 
             const name = document.getElementById('itemName').value.trim();
-            const contact = document.getElementById('itemContact').value.trim();
+            const client = document.getElementById('itemClient').value.trim();
             const location = document.getElementById('itemLocation').value.trim();
-            const formData = { name, contact, location };
+            const formData = { name, client, location };
 
-            if (!name || !contact || !location) {
+            if (!name || !client || !location) {
                 alert('Please fill out all fields.');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Submit Item';

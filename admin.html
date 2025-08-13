@@ -122,7 +122,7 @@
                     <tr>
                         <th>Timestamp</th>
                         <th>Name</th>
-                        <th>Contact</th>
+                        <th>Client</th>
                         <th>Location</th>
                         <th>GPS</th>
                         <th>Actions</th>
@@ -145,7 +145,7 @@
                 <form id="editItemForm">
                     <input type="hidden" id="editDocId">
                     <input type="text" id="editItemName" placeholder="Name" required>
-                    <input type="tel" id="editItemContact" placeholder="Contact" required>
+                    <input type="text" id="editItemClient" placeholder="Client" required>
                     <input type="text" id="editItemLocation" placeholder="Assigned Location" required>
                     <button type="submit" class="btn btn-save"><i class="fa-solid fa-save"></i> Save Changes</button>
                 </form>
@@ -205,9 +205,9 @@
                     
                     row.innerHTML = `
                         <td>${date}</td>
-                        <td>${item.name}</td>
-                        <td>${item.contact}</td>
-                        <td>${item.location}</td>
+                        <td>${item.name || ''}</td>
+                        <td>${item.client || ''}</td>
+                        <td>${item.location || ''}</td>
                         <td>${gpsCellContent}</td>
                         <td class="actions-cell">
                             <button class="btn btn-edit" data-id="${doc.id}"><i class="fa-solid fa-pencil"></i></button>
@@ -247,12 +247,12 @@
             if (!row) return;
 
             const name = row.cells[1].textContent;
-            const contact = row.cells[2].textContent;
+            const client = row.cells[2].textContent;
             const location = row.cells[3].textContent;
 
             document.getElementById('editDocId').value = docId;
             document.getElementById('editItemName').value = name;
-            document.getElementById('editItemContact').value = contact;
+            document.getElementById('editItemClient').value = client;
             document.getElementById('editItemLocation').value = location;
             
             editItemModal.style.display = 'flex';
@@ -264,7 +264,7 @@
             const docId = document.getElementById('editDocId').value;
             const updatedData = {
                 name: document.getElementById('editItemName').value,
-                contact: document.getElementById('editItemContact').value,
+                client: document.getElementById('editItemClient').value,
                 location: document.getElementById('editItemLocation').value,
             };
 
